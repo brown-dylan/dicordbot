@@ -27,42 +27,44 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DAILY_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_DAILY_ROLE_ID }}
-          SCHEDULE: ${{ github.event.schedule }}
-          MANUAL_CHECKIN_TYPE: ${{ github.event.inputs.checkin_type }}
+          CHECKIN_TYPE: ${{ github.event.inputs.checkin_type }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
-          if [ "$MANUAL_CHECKIN_TYPE" = "morning" ] || [ "$SCHEDULE" = "5 8 * * 1-5" ]; then
-            export MESSAGE="<@&${DISCORD_ROLE_ID}> **8:00 AM Morning Check-In**
-
-Post your plan for today:
-
-1. Top priorities today:
-2. Client work:
-3. Admin/internal work:
-4. Blockers:
-5. Help needed from anyone:"
-          else
-            export MESSAGE="<@&${DISCORD_ROLE_ID}> **5:00 PM End-of-Day Check-In**
-
-Post your wrap-up:
-
-1. Completed today:
-2. Still open:
-3. Blockers:
-4. Needs follow-up tomorrow:
-5. Anything someone else needs to take over:"
-          fi
-
           python3 - <<'PY'
           import json
           import os
           import urllib.request
 
           webhook_url = os.environ["DISCORD_WEBHOOK_URL"]
-          message = os.environ["MESSAGE"]
           role_id = os.environ["DISCORD_ROLE_ID"]
+          checkin_type = os.getenv("CHECKIN_TYPE", "")
+          schedule_cron = os.getenv("SCHEDULE_CRON", "")
+
+          morning_message = """Post your plan for today:
+
+          1. Top priorities today:
+          2. Client work:
+          3. Admin/internal work:
+          4. Help needed from anyone:"""
+
+          evening_message = """Post your wrap-up:
+
+          1. Completed today:
+          2. Still open:
+          3. Needs follow-up tomorrow:
+          4. Anything someone else needs to take over:"""
+
+          if checkin_type == "evening" or schedule_cron == "5 17 * * 1-5":
+              title = "5:00 PM End-of-Day Check-In"
+              body = evening_message
+          else:
+              title = "8:00 AM Morning Check-In"
+              body = morning_message
+
+          content = f"<@&{role_id}> **{title}**\n\n{body}"
 
           payload = {
-              "content": message,
+              "content": content,
               "allowed_mentions": {
                   "roles": [role_id]
               }
