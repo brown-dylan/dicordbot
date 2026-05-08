@@ -35,8 +35,8 @@ jobs:
           import os
           import urllib.request
 
-          webhook_url = os.environ["DISCORD_WEBHOOK_URL"]
-          role_id = os.environ["DISCORD_ROLE_ID"]
+          webhook_url = os.environ["DISCORD_WEBHOOK_URL"].strip()
+          role_id = os.environ["DISCORD_ROLE_ID"].strip()
           checkin_type = os.getenv("CHECKIN_TYPE", "")
           schedule_cron = os.getenv("SCHEDULE_CRON", "")
 
