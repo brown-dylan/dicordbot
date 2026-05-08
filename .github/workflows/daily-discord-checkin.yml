@@ -33,6 +33,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import urllib.error
           import urllib.request
 
           webhook_url = os.environ["DISCORD_WEBHOOK_URL"].strip()
@@ -40,19 +41,27 @@ jobs:
           checkin_type = os.getenv("CHECKIN_TYPE", "")
           schedule_cron = os.getenv("SCHEDULE_CRON", "")
 
+          if not webhook_url.startswith("https://"):
+              raise ValueError("DISCORD_DAILY_WEBHOOK_URL must be the full Discord webhook URL starting with https://")
+
+          if not role_id.isdigit():
+              raise ValueError("DISCORD_DAILY_ROLE_ID must be only the numeric Discord role ID")
+
           morning_message = """Post your plan for today:
 
           1. Top priorities today:
           2. Client work:
           3. Admin/internal work:
-          4. Help needed from anyone:"""
+          4. Blockers:
+          5. Help needed from anyone:"""
 
           evening_message = """Post your wrap-up:
 
           1. Completed today:
           2. Still open:
-          3. Needs follow-up tomorrow:
-          4. Anything someone else needs to take over:"""
+          3. Blockers:
+          4. Needs follow-up tomorrow:
+          5. Anything someone else needs to take over:"""
 
           if checkin_type == "evening" or schedule_cron == "5 17 * * 1-5":
               title = "5:00 PM End-of-Day Check-In"
@@ -75,10 +84,18 @@ jobs:
           request = urllib.request.Request(
               webhook_url,
               data=data,
-              headers={"Content-Type": "application/json"},
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "FIT-MSP-GitHub-Actions-Checkin/1.0"
+              },
               method="POST"
           )
 
-          with urllib.request.urlopen(request) as response:
-              print(f"Discord response status: {response.status}")
+          try:
+              with urllib.request.urlopen(request) as response:
+                  print(f"Discord response status: {response.status}")
+          except urllib.error.HTTPError as e:
+              print(f"Discord HTTP error: {e.code} {e.reason}")
+              print(e.read().decode("utf-8", errors="replace"))
+              raise
           PY
